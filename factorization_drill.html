@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>因数ドリル</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#0d1117; --card:#161b22; --card2:#21262d;
+  --accent:#58a6ff; --accent2:#79c0ff;
+  --correct:#3fb950; --wrong:#f85149;
+  --text:#e6edf3; --muted:#8b949e; --border:#30363d;
+  --purple:#bc8cff; --orange:#ffa657;
+}
+html,body {
+  height:100%; background:var(--bg); color:var(--text);
+  font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  overflow:auto;
+}
+.screen { display:none; width:100%; max-width:480px; padding:20px; flex-direction:column; align-items:center; }
+.screen.active { display:flex; }
+
+/* ===== START ===== */
+.logo {
+  font-size:48px; font-weight:900; letter-spacing:-1px;
+  background:linear-gradient(135deg,var(--accent),var(--purple));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  margin-bottom:4px;
+}
+.logo-sub { font-size:13px; color:var(--muted); letter-spacing:3px; margin-bottom:32px; }
+.info-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 20px; width:100%; margin-bottom:12px; }
+.info-title { font-size:10px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:10px; }
+.tags { display:flex; gap:8px; flex-wrap:wrap; }
+.tag { font-size:12px; font-weight:700; padding:4px 10px; border-radius:20px; }
+.tag.orange { background:rgba(255,166,87,.18); color:var(--orange); border:1px solid rgba(255,166,87,.3); }
+.tag.purple { background:rgba(188,140,255,.18); color:var(--purple); border:1px solid rgba(188,140,255,.3); }
+.tag.muted  { background:transparent; border:1px solid var(--border); color:var(--muted); }
+
+.diff-label { font-size:11px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:10px; align-self:flex-start; margin-top:4px; }
+.diff-grid { display:grid; grid-template-columns:1fr; gap:8px; width:100%; margin-bottom:8px; }
+.diff-btn {
+  padding:14px 16px; background:var(--card); border:2px solid var(--border);
+  border-radius:12px; color:var(--text); font-size:14px; font-weight:600;
+  cursor:pointer; text-align:left; transition:border-color .15s, background .15s;
+  display:flex; align-items:center; gap:12px;
+}
+.diff-btn .d-icon { font-size:20px; width:28px; text-align:center; }
+.diff-btn .d-info { display:flex; flex-direction:column; gap:2px; }
+.diff-btn .d-name { font-size:15px; font-weight:700; }
+.diff-btn .d-desc { font-size:11px; color:var(--muted); }
+.diff-btn.selected { border-color:var(--accent); background:rgba(88,166,255,.08); }
+.diff-btn.selected .d-name { color:var(--accent); }
+
+.start-btn {
+  margin-top:20px; width:100%; padding:18px;
+  background:linear-gradient(135deg,var(--accent),var(--purple));
+  border:none; border-radius:14px; color:#fff;
+  font-size:18px; font-weight:800; letter-spacing:2px; cursor:pointer;
+  box-shadow:0 8px 28px rgba(88,166,255,.3); transition:transform .1s, opacity .2s;
+}
+.start-btn:disabled { opacity:.4; cursor:default; }
+.start-btn:not(:disabled):active { transform:scale(.97); }
+
+/* ===== DRILL ===== */
+#drill { justify-content:space-between; min-height:100svh; padding:16px 20px 24px; }
+
+.top-bar { width:100%; display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.score-badge { background:var(--card); border:1px solid var(--border); border-radius:9px; padding:5px 12px; font-size:13px; font-weight:700; color:var(--correct); white-space:nowrap; }
+.prog-wrap { flex:1; }
+.prog-bg { height:5px; background:var(--border); border-radius:3px; overflow:auto; }
+.prog-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--purple)); border-radius:3px; transition:width .3s; }
+.prog-text { font-size:10px; color:var(--muted); text-align:center; margin-top:3px; }
+.timer { background:var(--card); border:1px solid var(--border); border-radius:9px; padding:5px 12px; font-size:19px; font-weight:800; color:var(--accent2); font-variant-numeric:tabular-nums; min-width:66px; text-align:center; }
+
+.q-area { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; width:100%; }
+.q-label { font-size:10px; letter-spacing:3px; color:var(--muted); }
+
+.condition-row { display:flex; gap:16px; align-items:stretch; width:100%; }
+.cond-card {
+  flex:1; background:var(--card); border:1px solid var(--border);
+  border-radius:14px; padding:14px 10px; text-align:center;
+  display:flex; flex-direction:column; gap:4px; align-items:center;
+}
+.cond-label { font-size:10px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
+.cond-val { font-size:40px; font-weight:900; line-height:1; }
+.cond-val.product { color:var(--orange); }
+.cond-val.sumval  { color:var(--purple); }
+
+.answer-row { display:flex; align-items:center; gap:12px; width:100%; justify-content:center; }
+.ans-slot { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.ans-slot-label { font-size:10px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
+.ans-box {
+  width:108px; height:68px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--card2); border:2px solid var(--border);
+  border-radius:12px; font-size:36px; font-weight:900; color:var(--text);
+  transition:border-color .15s, color .15s, box-shadow .15s;
+}
+.ans-box.active { border-color:var(--accent); box-shadow:0 0 0 3px rgba(88,166,255,.15); }
+.ans-box.has    { border-color:rgba(88,166,255,.5); }
+.ans-box.ok     { border-color:var(--correct); color:var(--correct); }
+.ans-box.ng     { border-color:var(--wrong);   color:var(--wrong); }
+.ans-box .placeholder { color:var(--muted); font-size:28px; }
+/* マイナス記号だけの状態 */
+.ans-box .minus-only { color:var(--orange); font-size:36px; }
+.and-sign { font-size:22px; color:var(--muted); font-weight:300; margin-top:24px; }
+
+.feedback { font-size:15px; font-weight:700; height:22px; text-align:center; }
+.feedback.ok { color:var(--correct); }
+.feedback.ng { color:var(--wrong); }
+
+/* ===== テンキー ===== */
+.pad-section { width:100%; }
+.tab-row { display:flex; gap:6px; margin-bottom:8px; }
+.tab-btn {
+  flex:1; padding:9px 6px; background:var(--card2); border:2px solid var(--border);
+  border-radius:9px; color:var(--muted); font-size:13px; font-weight:700; cursor:pointer;
+  transition:all .12s;
+}
+.tab-btn.active-tab { border-color:var(--accent); color:var(--accent); background:rgba(88,166,255,.1); }
+
+.pad-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:7px; }
+.pad-key {
+  aspect-ratio:1.15; background:var(--card2); border:1px solid var(--border);
+  border-radius:11px; color:var(--text); font-size:24px; font-weight:700;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:transform .08s, background .1s; user-select:none;
+}
+.pad-key:active { transform:scale(.91); background:#2d333b; }
+.pad-key.zero { grid-column:2; }
+.pad-key.del  { color:var(--muted); font-size:20px; }
+.pad-key.minus-key { color:var(--orange); font-size:30px; font-weight:900; border-color:rgba(255,166,87,.3); background:rgba(255,166,87,.08); }
+.pad-key.minus-key:active { background:rgba(255,166,87,.18); }
+
+.bottom-row { display:grid; grid-template-columns:1fr 2fr; gap:8px; }
+.btn-skip { padding:14px; background:var(--card); border:1px solid var(--border); border-radius:12px; color:var(--muted); font-size:13px; font-weight:700; cursor:pointer; }
+.btn-ok {
+  padding:14px; background:linear-gradient(135deg,var(--accent),var(--purple));
+  border:none; border-radius:12px; color:#fff; font-size:16px; font-weight:800;
+  letter-spacing:1px; cursor:pointer; box-shadow:0 4px 14px rgba(88,166,255,.3);
+}
+.btn-ok:disabled { opacity:.4; box-shadow:none; }
+
+/* ===== NAME INPUT ===== */
+.name-wrap { width:100%; margin-bottom:4px; }
+.name-label { font-size:11px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:8px; display:block; }
+.name-input {
+  width:100%; padding:14px 16px; background:var(--card);
+  border:2px solid var(--border); border-radius:12px;
+  color:var(--text); font-size:18px; font-weight:600;
+  outline:none; transition:border-color .2s;
+}
+.name-input:focus { border-color:var(--accent); }
+.name-input::placeholder { color:var(--muted); font-weight:400; }
+
+/* ===== RESULT ===== */
+#result { justify-content:center; gap:16px; }
+.result-title {
+  font-size:32px; font-weight:900;
+  background:linear-gradient(135deg,var(--accent),var(--purple));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.diff-badge { font-size:12px; color:var(--muted); margin-top:-10px; }
+.res-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; }
+.res-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center; }
+.res-lbl { font-size:10px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; margin-bottom:6px; }
+.res-val { font-size:34px; font-weight:900; color:var(--accent2); }
+.res-unit { font-size:12px; color:var(--muted); margin-left:3px; }
+.wrong-hd { font-size:11px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; align-self:flex-start; }
+.wrong-list { width:100%; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; max-height:160px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:7px; }
+.wrong-item { background:rgba(248,81,73,.12); border:1px solid rgba(248,81,73,.3); border-radius:7px; padding:5px 10px; font-size:13px; color:var(--wrong); font-weight:600; }
+.retry-btn { width:100%; padding:16px; background:linear-gradient(135deg,var(--accent),var(--purple)); border:none; border-radius:13px; color:#fff; font-size:16px; font-weight:800; letter-spacing:2px; cursor:pointer; box-shadow:0 6px 20px rgba(88,166,255,.3); }
+.stamp-card {
+  width:100%; background:var(--card); border:2px solid var(--accent);
+  border-radius:14px; padding:16px 20px;
+  display:flex; flex-direction:column; gap:6px;
+}
+.stamp-name { font-size:22px; font-weight:800; color:var(--text); }
+.stamp-meta { font-size:13px; color:var(--muted); }
+
+@keyframes pop   { 0%{transform:scale(1)} 40%{transform:scale(1.22)} 100%{transform:scale(1)} }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
+.pop   { animation:pop .18s ease; }
+.shake { animation:shake .25s ease; }
+</style>
+</head>
+<body>
+
+<!-- START -->
+<div class="screen active" id="start">
+  <div class="logo">因数ドリル</div>
+  <div class="logo-sub">Factorization Drill</div>
+  <div class="info-card">
+    <div class="info-title">問題形式</div>
+    <div class="tags">
+      <span class="tag orange">積 = p×q</span>
+      <span class="tag purple">和 = p+q</span>
+      <span class="tag muted">を見て2数を答える・全10問</span>
+    </div>
+  </div>
+
+  <div class="diff-label">難易度を選択</div>
+  <div class="diff-grid">
+    <button class="diff-btn" data-diff="easy" onclick="selectDiff(this)">
+      <span class="d-icon">🌱</span>
+      <span class="d-info">
+        <span class="d-name">やさしい</span>
+        <span class="d-desc">積・和がともに正（両方正の2数）</span>
+      </span>
+    </button>
+    <button class="diff-btn" data-diff="mid" onclick="selectDiff(this)">
+      <span class="d-icon">🔥</span>
+      <span class="d-info">
+        <span class="d-name">ふつう</span>
+        <span class="d-desc">積が正・和が負（両方負の2数）も含む</span>
+      </span>
+    </button>
+    <button class="diff-btn" data-diff="hard" onclick="selectDiff(this)">
+      <span class="d-icon">⚡</span>
+      <span class="d-info">
+        <span class="d-name">むずかしい</span>
+        <span class="d-desc">積が負（符号が違う2数）も含む・全パターン</span>
+      </span>
+    </button>
+  </div>
+  <div class="name-wrap">
+    <label class="name-label">名前を入力してください</label>
+    <input class="name-input" id="name-input" type="text" placeholder="例：山田 太郎" maxlength="20" oninput="checkReady()">
+  </div>
+  <button class="start-btn" id="start-btn" onclick="startDrill()" disabled>難易度と名前を入力してください</button>
+</div><!-- DRILL -->
+<div class="screen" id="drill">
+  <div class="top-bar">
+    <div class="score-badge" id="score">○ 0</div>
+    <div class="prog-wrap">
+      <div class="prog-bg"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+      <div class="prog-text" id="prog-text">1 / 10</div>
+    </div>
+    <div class="timer" id="timer">0.0</div>
+  </div>
+
+  <div class="q-area">
+    <div class="q-label" id="q-label">QUESTION 1</div>
+    <div class="condition-row">
+      <div class="cond-card">
+        <div class="cond-label">積 p × q</div>
+        <div class="cond-val product" id="q-prod">—</div>
+      </div>
+      <div class="cond-card">
+        <div class="cond-label">和 p + q</div>
+        <div class="cond-val sumval" id="q-sum">—</div>
+      </div>
+    </div>
+    <div class="answer-row">
+      <div class="ans-slot">
+        <div class="ans-slot-label">p</div>
+        <div class="ans-box active" id="box-p"><span class="placeholder">?</span></div>
+      </div>
+      <div class="and-sign">と</div>
+      <div class="ans-slot">
+        <div class="ans-slot-label">q</div>
+        <div class="ans-box" id="box-q"><span class="placeholder">?</span></div>
+      </div>
+    </div>
+    <div class="feedback" id="fb"></div>
+  </div>
+
+  <div class="pad-section">
+    <div class="tab-row">
+      <button class="tab-btn active-tab" id="tab-p" onclick="switchSlot('p')">← p を入力中</button>
+      <button class="tab-btn"            id="tab-q" onclick="switchSlot('q')">q を入力 →</button>
+    </div>
+    <div class="pad-grid">
+      <button class="pad-key" onclick="padPress(7)">7</button>
+      <button class="pad-key" onclick="padPress(8)">8</button>
+      <button class="pad-key" onclick="padPress(9)">9</button>
+      <button class="pad-key" onclick="padPress(4)">4</button>
+      <button class="pad-key" onclick="padPress(5)">5</button>
+      <button class="pad-key" onclick="padPress(6)">6</button>
+      <button class="pad-key" onclick="padPress(1)">1</button>
+      <button class="pad-key" onclick="padPress(2)">2</button>
+      <button class="pad-key" onclick="padPress(3)">3</button>
+      <button class="pad-key minus-key" onclick="padMinus()">−</button>
+      <button class="pad-key zero" onclick="padPress(0)">0</button>
+      <button class="pad-key del" onclick="padDel()">⌫</button>
+    </div>
+    <div class="bottom-row">
+      <button class="btn-skip" onclick="skipQ()">スキップ</button>
+      <button class="btn-ok" id="ok-btn" onclick="submitAnswer()">決定 ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="screen" id="result">
+  <div class="result-title">結果発表！</div>
+  <div class="stamp-card" id="stamp-card">
+    <div class="stamp-name" id="stamp-name">—</div>
+    <div class="stamp-meta" id="stamp-meta">—</div>
+  </div>
+  <div class="res-grid">
+    <div class="res-card"><div class="res-lbl">正解数</div><div class="res-val" id="r-correct">—</div></div>
+    <div class="res-card"><div class="res-lbl">タイム</div><div class="res-val" id="r-time">—</div></div>
+    <div class="res-card"><div class="res-lbl">正答率</div><div class="res-val" id="r-rate">—</div></div>
+    <div class="res-card"><div class="res-lbl">1問平均</div><div class="res-val" id="r-avg">—</div></div>
+  </div>
+  <div class="wrong-hd" id="wrong-hd"></div>
+  <div class="wrong-list" id="wrong-list"></div>
+  <button class="retry-btn" onclick="showScreen('start')">もう一度チャレンジ →</button>
+</div>
+
+<script>
+const TOTAL = 10;
+const DIFF_NAMES = { easy:'🌱 やさしい', mid:'🔥 ふつう', hard:'⚡ むずかしい' };
+
+// ── 問題生成（|積| < 50） ─────────────────────────
+function genPairs(diff) {
+  const pairs = [];
+  if (diff === 'easy') {
+    // 両方正、積 < 50
+    for (let p = 1; p <= 12; p++)
+      for (let q = p; q <= 12; q++)
+        if (p * q < 50) pairs.push([p, q]);
+  } else if (diff === 'mid') {
+    // 両方正 + 両方負、|積| < 50
+    for (let p = 1; p <= 12; p++)
+      for (let q = p; q <= 12; q++)
+        if (p * q < 50) pairs.push([p, q]);
+    for (let p = -12; p <= -1; p++)
+      for (let q = p; q <= -1; q++)
+        if (p * q < 50) pairs.push([p, q]);
+  } else {
+    // 全パターン、|積| < 50
+    for (let p = -12; p <= 12; p++)
+      for (let q = p; q <= 12; q++)
+        if (p !== 0 && q !== 0 && Math.abs(p * q) < 50)
+          pairs.push([p, q]);
+  }
+  return pairs;
+}
+
+function shuffle(a) {
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function buildQuestions(diff) {
+  const seen = new Set();
+  const qs = [];
+  for (const [p, q] of shuffle(genPairs(diff))) {
+    const key = `${Math.min(p,q)}_${Math.max(p,q)}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      qs.push({ p, q, prod: p*q, sum: p+q });
+    }
+    if (qs.length >= TOTAL) break;
+  }
+  return qs;
+}
+
+// ── 状態 ──────────────────────────────────────────
+let questions=[], idx=0, correctCnt=0, wrongs=[];
+let timerID=null, t0=0, totalSec=0;
+let answered=false, activeSlot='p';
+// 各スロットの入力状態: { neg: bool, digits: string }
+let slots = { p: {neg:false, digits:''}, q: {neg:false, digits:''} };
+
+// ── スロット値の文字列表現 ─────────────────────────
+function slotStr(slot) {
+  const s = slots[slot];
+  if (s.digits === '') return s.neg ? '-' : '';
+  return (s.neg ? '-' : '') + s.digits;
+}
+
+function slotNum(slot) {
+  const str = slotStr(slot);
+  return str === '' || str === '-' ? null : parseInt(str, 10);
+}
+
+// ── テンキー操作 ───────────────────────────────────
+function padPress(n) {
+  if (answered) return;
+  const s = slots[activeSlot];
+  if (s.digits.length >= 2) return; // 最大2桁
+  s.digits += String(n);
+  renderBoxes();
+}
+
+function padMinus() {
+  if (answered) return;
+  const s = slots[activeSlot];
+  s.neg = !s.neg;          // どのタイミングでも符号トグル
+  renderBoxes();
+}
+
+function padDel() {
+  if (answered) return;
+  const s = slots[activeSlot];
+  if (s.digits.length > 0) {
+    s.digits = s.digits.slice(0, -1);
+  } else {
+    s.neg = false;          // 数字がなければ符号もクリア
+  }
+  renderBoxes();
+}
+
+function switchSlot(slot) {
+  activeSlot = slot;
+  renderBoxes();
+  renderTabs();
+}
+
+function renderBoxes() {
+  ['p','q'].forEach(slot => {
+    const box = document.getElementById(`box-${slot}`);
+    const str = slotStr(slot);
+    const isActive = slot === activeSlot && !answered;
+
+    if (str === '') {
+      box.innerHTML = '<span class="placeholder">?</span>';
+      box.className = 'ans-box' + (isActive ? ' active' : '');
+    } else if (str === '-') {
+      box.innerHTML = '<span class="minus-only">−</span>';
+      box.className = 'ans-box has' + (isActive ? ' active' : '');
+    } else {
+      box.textContent = str;
+      box.className = 'ans-box has' + (isActive ? ' active' : '');
+    }
+  });
+}
+
+function renderTabs() {
+  document.getElementById('tab-p').className = 'tab-btn' + (activeSlot==='p' ? ' active-tab' : '');
+  document.getElementById('tab-q').className = 'tab-btn' + (activeSlot==='q' ? ' active-tab' : '');
+  document.getElementById('tab-p').textContent = activeSlot==='p' ? '← p を入力中' : 'p を入力';
+  document.getElementById('tab-q').textContent = activeSlot==='q' ? '← q を入力中' : 'q を入力';
+}
+
+// ── ドリル制御 ────────────────────────────────────
+function selectDiff(btn) {
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentDiff = btn.dataset.diff;
+  checkReady();
+}
+
+function checkReady() {
+  const hasName = document.getElementById('name-input').value.trim() !== '';
+  const hasDiff = currentDiff !== '';
+  const sb = document.getElementById('start-btn');
+  sb.disabled = !(hasName && hasDiff);
+  if (!hasName && !hasDiff) sb.textContent = '難易度と名前を入力してください';
+  else if (!hasDiff)        sb.textContent = '難易度を選んでください';
+  else if (!hasName)        sb.textContent = '名前を入力してください';
+  else                      sb.textContent = 'はじめる →';
+}
+let currentDiff = '';
+
+function startDrill() {
+  questions = buildQuestions(currentDiff);
+  idx=0; correctCnt=0; wrongs=[]; answered=false;
+  showScreen('drill');
+  initQ(0);
+  updateScore();
+  t0 = Date.now();
+  timerID = setInterval(() => {
+    document.getElementById('timer').textContent = ((Date.now()-t0)/1000).toFixed(1);
+  }, 100);
+}
+
+function initQ(i) {
+  const q = questions[i];
+  document.getElementById('q-label').textContent = `QUESTION ${i+1}`;
+  document.getElementById('q-prod').textContent = q.prod;
+  document.getElementById('q-sum').textContent  = q.sum;
+  document.getElementById('prog').style.width = `${(i/TOTAL)*100}%`;
+  document.getElementById('prog-text').textContent = `${i+1} / ${TOTAL}`;
+  document.getElementById('fb').textContent = '';
+  document.getElementById('fb').className = 'feedback';
+  document.getElementById('ok-btn').disabled = false;
+  answered = false;
+  activeSlot = 'p';
+  slots = { p:{neg:false,digits:''}, q:{neg:false,digits:''} };
+  renderBoxes();
+  renderTabs();
+}
+
+function updateScore() {
+  const el = document.getElementById('score');
+  el.textContent = `○ ${correctCnt}`;
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+}
+
+function submitAnswer() {
+  if (answered) return;
+  const np = slotNum('p'), nq = slotNum('q');
+  if (np === null || nq === null) {
+    setFB('p と q の両方を入力してください', 'ng'); return;
+  }
+  const q = questions[idx];
+  const ok = (np===q.p && nq===q.q) || (np===q.q && nq===q.p);
+  answered = true;
+  document.getElementById('ok-btn').disabled = true;
+
+  if (ok) {
+    correctCnt++;
+    document.getElementById('box-p').className = 'ans-box ok';
+    document.getElementById('box-q').className = 'ans-box ok';
+    setFB('✓ 正解！', 'ok');
+    updateScore();
+    setTimeout(nextQ, 900);
+  } else {
+    const hint = (np*nq === q.prod)
+      ? `積は合ってます！和が違います（正解: ${q.p} と ${q.q}）`
+      : `正解は ${q.p} と ${q.q}`;
+    document.getElementById('box-p').className = 'ans-box ng shake';
+    document.getElementById('box-q').className = 'ans-box ng shake';
+    wrongs.push(q);
+    setFB(hint, 'ng');
+    setTimeout(nextQ, 2000);
+  }
+}
+
+function skipQ() {
+  if (answered) return;
+  wrongs.push(questions[idx]);
+  nextQ();
+}
+
+function nextQ() {
+  idx++;
+  if (idx >= TOTAL) {
+    clearInterval(timerID);
+    totalSec = (Date.now()-t0)/1000;
+    showResults();
+  } else {
+    initQ(idx);
+  }
+}
+
+function setFB(msg, cls) {
+  const el = document.getElementById('fb');
+  el.textContent = msg; el.className = `feedback ${cls}`;
+}
+
+function showResults() {
+  showScreen('result');
+  // スタンプ：名前・日時・難易度
+  const name = document.getElementById('name-input').value.trim() || '（名前なし）';
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('stamp-name').textContent = name;
+  document.getElementById('stamp-meta').textContent = `因数ドリル ${DIFF_NAMES[currentDiff]}　${dateStr}　${timeStr}`;
+  document.getElementById('r-correct').innerHTML = `${correctCnt}<span class="res-unit">問</span>`;
+  document.getElementById('r-time').innerHTML    = `${totalSec.toFixed(1)}<span class="res-unit">秒</span>`;
+  document.getElementById('r-rate').innerHTML    = `${Math.round(correctCnt/TOTAL*100)}<span class="res-unit">%</span>`;
+  document.getElementById('r-avg').innerHTML     = `${(totalSec/TOTAL).toFixed(1)}<span class="res-unit">秒</span>`;
+  const wl = document.getElementById('wrong-list');
+  const wh = document.getElementById('wrong-hd');
+  wl.innerHTML = '';
+  if (wrongs.length) {
+    wh.textContent = `間違えた問題（${wrongs.length}問）`;
+    wrongs.forEach(w => {
+      const el = document.createElement('div');
+      el.className = 'wrong-item';
+      el.textContent = `積${w.prod} 和${w.sum} → ${w.p}と${w.q}`;
+      wl.appendChild(el);
+    });
+  } else {
+    wh.textContent = '全問正解！🎉';
+  }
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+</script>
+</body>
+</html>
