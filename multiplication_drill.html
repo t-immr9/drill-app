@@ -146,8 +146,23 @@ html, body {
   border-radius:14px; padding:16px 20px;
   display:flex; flex-direction:column; gap:6px;
 }
-.stamp-name { font-size:22px; font-weight:800; color:var(--text); }
-.stamp-meta { font-size:13px; color:var(--muted); }
+.stamp-name { font-size:20px; font-weight:800; color:var(--text); }
+.stamp-meta { font-size:12px; color:var(--muted); }
+
+/* グレードバッジ */
+.grade-wrap {
+  width:100%; display:flex; align-items:center; gap:16px;
+  background:var(--card); border:2px solid var(--border);
+  border-radius:14px; padding:14px 20px;
+}
+.grade-badge { font-size:64px; font-weight:900; line-height:1; min-width:72px; text-align:center; }
+.grade-S { color:#ffd700; text-shadow:0 0 20px rgba(255,215,0,.5); }
+.grade-A { color:#4ecdc4; text-shadow:0 0 20px rgba(78,205,196,.4); }
+.grade-B { color:#58a6ff; text-shadow:0 0 20px rgba(88,166,255,.4); }
+.grade-C { color:#a7a9be; }
+.grade-D { color:#ff4757; }
+.grade-info { display:flex; flex-direction:column; gap:4px; }
+.grade-cond { font-size:12px; color:var(--muted); line-height:1.5; }
 .res-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; }
 .res-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center; }
 .res-label { font-size:10px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; margin-bottom:6px; }
@@ -246,9 +261,13 @@ html, body {
 <!-- RESULT -->
 <div class="screen" id="result">
   <div class="result-title">結果発表！</div>
-  <div class="stamp-card" id="stamp-card">
-    <div class="stamp-name" id="stamp-name">—</div>
-    <div class="stamp-meta" id="stamp-meta">—</div>
+  <div class="grade-wrap" id="grade-wrap">
+    <div class="grade-badge" id="grade-badge">—</div>
+    <div class="grade-info">
+      <div class="stamp-name" id="stamp-name">—</div>
+      <div class="stamp-meta" id="stamp-meta">—</div>
+      <div class="grade-cond" id="grade-cond">—</div>
+    </div>
   </div>
   <div class="res-grid">
     <div class="res-card"><div class="res-label">正解数</div><div class="res-val" id="r-correct">—</div></div>
@@ -397,8 +416,22 @@ function setFB(msg,cls,auto){
   if(auto) setTimeout(()=>{el.textContent='';},1800);
 }
 
+function calcGrade(correct, sec){
+  if(correct===100 && sec<=240) return {g:'S', color:'grade-S', cond:'全問正解 かつ 240秒以内'};
+  if(correct===100 && sec<=360) return {g:'A', color:'grade-A', cond:'全問正解 かつ 360秒以内'};
+  if(correct>=95  && sec<=420) return {g:'B', color:'grade-B', cond:'95問以上正解 かつ 420秒以内'};
+  if(correct>=90  && sec<=600) return {g:'C', color:'grade-C', cond:'90問以上正解 かつ 600秒以内'};
+  return {g:'D', color:'grade-D', cond:'次回またチャレンジ！'};
+}
+
 function showResults(){
   showScreen('result');
+  // グレード
+  const grade = calcGrade(correct, totalSec);
+  const badge = document.getElementById('grade-badge');
+  badge.textContent = grade.g;
+  badge.className = `grade-badge ${grade.color}`;
+  document.getElementById('grade-cond').textContent = grade.cond;
   // スタンプ：名前・日時
   const name = document.getElementById('name-input').value.trim() || '（名前なし）';
   const now = new Date();
