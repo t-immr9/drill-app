@@ -25,7 +25,10 @@ body {
   font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   overflow-x:hidden; overflow-y:auto;
+  /* スマホでボタンが見切れないよう stretch に */
+  align-items:stretch;
 }
+body > .screen { align-self:center; width:100%; }
 .screen { display:none; width:100%; max-width:480px; padding:20px; flex-direction:column; align-items:center; }
 .screen.active { display:flex; }
 
@@ -54,7 +57,17 @@ body {
 }
 
 /* ===== DRILL ===== */
-#drill { justify-content:space-between; min-height:100dvh; padding:env(safe-area-inset-top, 12px) 20px env(safe-area-inset-bottom, 16px); padding-top:max(env(safe-area-inset-top), 16px); padding-bottom:max(env(safe-area-inset-bottom), 24px); position:relative; }
+#drill { justify-content:space-between; min-height:100dvh; padding:env(safe-area-inset-top, 12px) 20px env(safe-area-inset-bottom, 16px); padding-top:max(env(safe-area-inset-top), 16px); padding-bottom:max(env(safe-area-inset-bottom), 24px); position:relative; overflow-y:auto; }
+@media (max-height: 700px) {
+  #drill { justify-content:flex-start; gap:8px; }
+  .q-area { flex:none; padding:8px 0; }
+  .pad-section { margin-top:auto; }
+  .q-num { font-size:clamp(30px, 10vw, 50px) !important; }
+  .answer-box { min-height:clamp(46px, 12vw, 60px) !important; font-size:clamp(28px, 9vw, 42px) !important; }
+  .pad-key { aspect-ratio:1.6; font-size:clamp(18px, 5vw, 22px); }
+  .btn-ok, .btn-skip { padding:11px; }
+  .boss-hp-bar { margin-bottom:4px; }
+}
 
 /* ボス用背景オーバーレイ */
 .boss-overlay {
